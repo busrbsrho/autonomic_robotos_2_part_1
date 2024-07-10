@@ -3,8 +3,7 @@ import numpy as np
 import csv
 from detection import detect_markers
 
-size = 5  # Size of the marker in centimeters
-
+size = 8  # Size of the marker in centimeters
 
 def process_video(video_source, output_filename, csv_filename):
     # Open the video source (0 for webcam, or file path for video file)
@@ -51,77 +50,31 @@ def process_video(video_source, output_filename, csv_filename):
                 break
 
             # Call detect_markers with the frame size
-            frame, csv_data, movement, distance, yaw, pitch = detect_markers(frame, camera_matrix, distortion,
-                                                                             marker_dict, MARKER_SIZE, param_markers,
-                                                                             frame_id, width, height)
+            frame, csv_data, movement = detect_markers(frame, camera_matrix, distortion, marker_dict, MARKER_SIZE, param_markers,
+                                             frame_id, width, height)
 
             # Display the movement direction on the frame
             cv.putText(frame, movement, (50, 50), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv.LINE_AA)
 
-            if distance is not None and yaw is not None and pitch is not None:
-                # Display the distance, yaw, and pitch on the frame
-                cv.putText(frame, f"Dist: {distance:.2f} cm", (50, 100), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2,
-                           cv.LINE_AA)
-                cv.putText(frame, f"Yaw: {yaw:.2f} degrees", (50, 150), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2,
-                           cv.LINE_AA)
-                cv.putText(frame, f"Pitch: {pitch:.2f} degrees", (50, 200), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255),
-                           2, cv.LINE_AA)
-
-            # Display the frame
+            out.write(frame)
             cv.imshow("frame", frame)
             key = cv.waitKey(1)
-
             if key == ord("q"):
                 break
-            elif key == ord("c"):  # Press 'c' to capture a picture
-                # Define the filename for the captured image and data
-                image_filename = "capture_latest.png"
-                text_filename = "capture_latest.txt"
-
-                # Save the frame as an image
-                cv.imwrite(image_filename, frame)
-
-                # Save the distance, yaw, and pitch to a text file
-                if distance is not None and yaw is not None and pitch is not None:
-                    with open(text_filename, 'w') as f:
-                        f.write(f"Distance: {distance:.2f} cm\n")
-                        f.write(f"Yaw: {yaw:.2f} degrees\n")
-                        f.write(f"Pitch: {pitch:.2f} degrees\n")
-
-                print(f"Captured image and data saved as {image_filename} and {text_filename}")
-
-            elif key == ord("v"):  # Press 'v' to capture a special image
-                # Define the filename for the great position capture
-                great_position_image_filename = "great_position.png"
-                great_position_text_filename = "great_position.txt"
-
-                # Save the frame as an image
-                cv.imwrite(great_position_image_filename, frame)
-
-                # Save the distance, yaw, and pitch to a text file
-                if distance is not None and yaw is not None and pitch is not None:
-                    with open(great_position_text_filename, 'w') as f:
-                        f.write(f"Distance: {distance:.2f} cm\n")
-                        f.write(f"Yaw: {yaw:.2f} degrees\n")
-                        f.write(f"Pitch: {pitch:.2f} degrees\n")
-
-                print(
-                    f"Great position captured and saved as {great_position_image_filename} and {great_position_text_filename}")
 
             # Write data to CSV
             for data in csv_data:
                 writer.writerow(data)
 
-            out.write(frame)
             frame_id += 1
 
     cap.release()
     out.release()
     cv.destroyAllWindows()
 
-
 if __name__ == "__main__":
-    video_source = 0  # Change to the path of a video file if needed
+    video_source = "challengeTest.mp4"  # Change to 0 for webcam
+    #video_source = 0
     output_filename = "output.mp4"  # Output video filename
     csv_filename = "output.csv"  # Output CSV filename
     process_video(video_source, output_filename, csv_filename)
