@@ -2,10 +2,6 @@ import cv2 as cv
 from cv2 import aruco
 import numpy as np
 
-wanted_dis=47
-wanted_yaw=23
-wanted_pitch=-7
-
 
 def detect_markers(frame, camera_matrix, distortion, marker_dict, marker_size, param_markers, frame_id, frame_width,
                    frame_height):
@@ -70,7 +66,7 @@ def detect_markers(frame, camera_matrix, distortion, marker_dict, marker_size, p
         marker_center_y = np.mean(corners_closest[:, 1])
         frame_center_y = frame_height / 2
         deviation_y = marker_center_y - frame_center_y
-        pitch_from_center = -1* (deviation_y / frame_center_y) * 45
+        pitch_from_center = (deviation_y / frame_center_y) * 45
 
         # Calculate movement direction based on closest and second closest markers
         if second_closest_marker is not None:
@@ -81,59 +77,69 @@ def detect_markers(frame, camera_matrix, distortion, marker_dict, marker_size, p
         else:
             # If no second closest marker found, use default
             movement = calculate_movement(distance, None, yaw_from_center, pitch_from_center)
-
-        return frame, csv_data, movement, distance, yaw_from_center, pitch_from_center
     else:
-        return frame, csv_data, "No marker detected", None, None, None
+        movement = "No marker detected"
+
+    return frame, csv_data, movement
 
 
-def calculate_movement(closest_dis, second_closest_dis, yaw_from_center, pitch_from_center):
-    if closest_dis == 0:
-        return "QR not detected"
-
-    # Ensure saved parameters are treated as floats
-    saved_distance = wanted_dis
-    saved_yaw = wanted_yaw
-    saved_pitch = wanted_pitch
-
-    print(f"Saved Distance: {saved_distance}")
-    print(f"Closest Distance: {closest_dis}")
-    print(yaw_from_center)
-    print(pitch_from_center)
-
-    # Define the range for movement decisions
-    distance_threshold = 10  # Example threshold
-    yaw_threshold = 10  # Example threshold
-    pitch_threshold = 10  # Example threshold
-
-    if saved_distance + distance_threshold < closest_dis:  # QR is far
-
-        if (saved_yaw + yaw_threshold) > yaw_from_center > (saved_yaw - yaw_threshold) and (
-                saved_pitch + 5) > pitch_from_center > (
-                saved_pitch - pitch_threshold):
-            return "Move forward"
-        elif (saved_yaw + yaw_threshold) > yaw_from_center > (saved_yaw - yaw_threshold):
-            if pitch_from_center > (saved_pitch + pitch_threshold):
-                return "Move Up"
-            elif pitch_from_center < (saved_pitch - pitch_threshold):
-                return "Move Down"
-        elif 5 > pitch_from_center > (saved_pitch - pitch_threshold):
-            if yaw_from_center > (saved_yaw + yaw_threshold):
-                return "Move right"
-            elif yaw_from_center < (saved_yaw - yaw_threshold):
-                return "Move left"
+def calculate_movement(closest_dis, second_closest_dis, yaw, pitch):
+    # Determine movement direction based on distances and orientation
+    if closest_dis < 80:  # closest QR is too close
+        if second_closest_dis is not None:
+            # Perform checks based on the second closest QR code
+            if second_closest_dis > 100 and 5 > yaw > -5 and 5 > pitch > -5:
+                return "Move forward"
+            elif 5 > yaw > -5:
+                if pitch > 5:
+                    return "Move down"
+                elif pitch < -5:
+                    return "Move up"
+            elif 5 > pitch > -5:
+                if yaw > 5:
+                    return "Move right"
+                elif yaw < -5:
+                    return "Move left"
+            elif not 5 > yaw > -5 and not 5 > pitch > -5:
+                if pitch > 5:
+                    return "Move down"
+                elif pitch < -5:
+                    return "Move up"
+                if yaw > 5:
+                    return "Move right"
+                elif yaw < -5:
+                    return "Move left"
         else:
-            if pitch_from_center > (saved_pitch + pitch_threshold):
-                return "Move Up"
-            elif pitch_from_center < (saved_pitch - pitch_threshold):
-                return "Move Down"
-            if yaw_from_center > (saved_yaw + yaw_threshold):
-                return "Move right"
-            elif yaw_from_center < (saved_yaw - yaw_threshold):
-                return "Move left"
-    elif(saved_yaw + yaw_threshold) > yaw_from_center > (saved_yaw - yaw_threshold) and (
-                saved_pitch + 5) > pitch_from_center > (
-                saved_pitch - pitch_threshold):
-            return "great"
+            # No second closest QR detected, turn towards opposite direction of closest QR
+            if yaw > 0:
+                return "Turn left"
+            elif yaw <= 0:
+                return "Turn right"
+
     else:
-        return "Move back"
+        # Default behavior if closest QR is not too close
+        if closest_dis > 100 and 5 > yaw > -5 and 5 > pitch > -5:
+            return "Move forward"
+        elif closest_dis < 80 and 5 > yaw > -5 and 5 > pitch > -5:
+            return "Move backward"
+        elif 5 > yaw > -5:
+            if pitch > 5:
+                return "Move down"
+            elif pitch < -5:
+                return "Move up"
+        elif 5 > pitch > -5:
+            if yaw > 5:
+                return "Move right"
+            elif yaw < -5:
+                return "Move left"
+        elif not 5 > yaw > -5 and not 5 > pitch > -5:
+            if pitch > 5:
+                return "Move down"
+            elif pitch < -5:
+                return "Move up"
+            if yaw > 5:
+                return "Move right"
+            elif yaw < -5:
+                return "Move left"
+
+    return "Stay"
